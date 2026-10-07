@@ -126,6 +126,7 @@ const Dashboard = () => {
   // Datos para AreaChart de ventas
   const salesData = (charts.sales_by_day || []).map(item => ({
     ...item,
+    total: parseFloat(item.total) || 0,
     formattedDate: formatDateForChart(item.date, charts.sales_by_day.length),
   }));
   const hasSales = salesData.length > 0;
@@ -261,7 +262,7 @@ const Dashboard = () => {
                   width={58}
                   axisLine={false}
                   tickLine={false}
-                  domain={[0, (max) => Math.ceil((max * 1.15) / 100) * 100]}
+                  domain={[0, (dataMax) => dataMax > 0 ? Math.ceil((dataMax * 1.2) / 50) * 50 : 500]}
                 />
                 <Tooltip
                   content={
