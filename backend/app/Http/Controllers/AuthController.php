@@ -42,15 +42,18 @@ class AuthController extends Controller
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
+        $user->load('branch:id,name');
 
         return response()->json([
             'access_token' => $token,
             'token_type' => 'Bearer',
             'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $user->role,
+                'id'        => $user->id,
+                'name'      => $user->name,
+                'email'     => $user->email,
+                'role'      => $user->role,
+                'branch_id' => $user->branch_id,
+                'branch'    => $user->branch,
             ]
         ]);
     }
@@ -103,12 +106,15 @@ class AuthController extends Controller
 
     public function me(Request $request)
     {
+        $user = $request->user()->load('branch:id,name');
         return response()->json([
             'user' => [
-                'id' => $request->user()->id,
-                'name' => $request->user()->name,
-                'email' => $request->user()->email,
-                'role' => $request->user()->role,
+                'id'        => $user->id,
+                'name'      => $user->name,
+                'email'     => $user->email,
+                'role'      => $user->role,
+                'branch_id' => $user->branch_id,
+                'branch'    => $user->branch,
             ]
         ]);
     }

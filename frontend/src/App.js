@@ -45,9 +45,11 @@ function App() {
               </Suspense>
             } />
             <Route path="expenses" element={
-              <Suspense fallback={<LoadingSpinner />}>
-                <Expenses />
-              </Suspense>
+              <ProtectedRoute adminOnly>
+                <Suspense fallback={<LoadingSpinner />}>
+                  <Expenses />
+                </Suspense>
+              </ProtectedRoute>
             } />
             <Route path="reports" element={
               <Suspense fallback={<LoadingSpinner />}>

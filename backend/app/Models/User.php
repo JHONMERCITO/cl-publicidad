@@ -18,6 +18,7 @@ class User extends Authenticatable
         'password',
         'role',
         'active',
+        'branch_id',
     ];
 
     protected $hidden = [
@@ -31,6 +32,11 @@ class User extends Authenticatable
     ];
 
     // Relaciones
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
     public function receipts()
     {
         return $this->hasMany(Receipt::class);

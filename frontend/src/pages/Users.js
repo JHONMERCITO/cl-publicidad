@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/userService';
+import branchService from '../services/branchService';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
 import toast from 'react-hot-toast';
@@ -14,6 +15,7 @@ import {
 
 const Users = () => {
   const [users, setUsers] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
@@ -21,13 +23,14 @@ const Users = () => {
     name: '',
     email: '',
     password: '',
-    role: 'employee'
+    role: 'employee',
+    branch_id: null,
   });
   const { user: currentUser } = useAuth();
 
-  // Cargar usuarios reales desde la API
   useEffect(() => {
     fetchUsers();
+    branchService.getAll().then(res => setBranches(res.data)).catch(() => {});
   }, []);
 
   const fetchUsers = async () => {
@@ -89,7 +92,8 @@ const Users = () => {
       name: user.name,
       email: user.email,
       password: '',
-      role: user.role
+      role: user.role,
+      branch_id: user.branch_id || null,
     });
     setShowModal(true);
   };
@@ -116,7 +120,8 @@ const Users = () => {
       name: '',
       email: '',
       password: '',
-      role: 'employee'
+      role: 'employee',
+      branch_id: null,
     });
     setEditingUser(null);
   };
@@ -231,6 +236,9 @@ const Users = () => {
                     Rol
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Sucursal
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Fecha Registro
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -260,12 +268,18 @@ const Users = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        user.role === 'admin' 
-                          ? 'bg-purple-100 text-purple-800' 
+                        user.role === 'admin'
+                          ? 'bg-purple-100 text-purple-800'
                           : 'bg-green-100 text-green-800'
                       }`}>
                         {user.role === 'admin' ? 'Administrador' : 'Empleado'}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {user.branch?.name
+                        ? <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-700">{user.branch.name}</span>
+                        : <span className="text-gray-400">—</span>
+                      }
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(user.created_at).toLocaleDateString()}
@@ -359,6 +373,22 @@ const Users = () => {
             >
               <option value="employee">Empleado</option>
               <option value="admin">Administrador</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Sucursal
+            </label>
+            <select
+              value={formData.branch_id || ''}
+              onChange={(e) => setFormData({ ...formData, branch_id: e.target.value || null })}
+              className="mt-1 input-field"
+            >
+              <option value="">Sin sucursal</option>
+              {branches.filter(b => b.is_active).map(b => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
             </select>
           </div>
 

@@ -27,6 +27,7 @@ class Receipt extends Model
         'status',
         'notes',
         'user_id',
+        'branch_id',
         'receipt_date',
     ];
 
@@ -41,6 +42,11 @@ class Receipt extends Model
     ];
 
     // Relaciones
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -149,6 +155,12 @@ class Receipt extends Model
     public function scopeCompleted($query)
     {
         return $query->where('status', 'completado');
+    }
+
+    // Includes all confirmed work (con_anticipo → completado), excludes quotes and cancelled
+    public function scopeActive($query)
+    {
+        return $query->whereIn('status', ['con_anticipo', 'en_produccion', 'listo_entrega', 'completado']);
     }
 
     public function scopeWithAdvance($query)

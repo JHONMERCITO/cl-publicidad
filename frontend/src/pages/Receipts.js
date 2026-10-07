@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { receiptService } from '../services/receiptService';
+import branchService from '../services/branchService';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import Button from '../components/Button';
@@ -36,7 +37,9 @@ const Receipts = () => {
     receipt_number: '',
     date_from: '',
     date_to: '',
+    branch_id: '',
   });
+  const [branches, setBranches] = useState([]);
   
   // Modales
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -79,6 +82,10 @@ const Receipts = () => {
   useEffect(() => {
     fetchReceipts();
   }, [filters]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (isAdmin) branchService.getAll().then(res => setBranches(res.data)).catch(() => {});
+  }, [isAdmin]);
 
   const fetchReceipts = async (page = 1) => {
     try {
@@ -333,6 +340,24 @@ const Receipts = () => {
               className="mt-1 input-field"
             />
           </div>
+
+          {isAdmin && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Sucursal
+              </label>
+              <select
+                value={filters.branch_id}
+                onChange={(e) => handleFilterChange('branch_id', e.target.value)}
+                className="mt-1 input-field"
+              >
+                <option value="">Todas</option>
+                {branches.map(b => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
@@ -360,6 +385,11 @@ const Receipts = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Vendedor
                 </th>
+                {isAdmin && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Sucursal
+                  </th>
+                )}
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Acciones
                 </th>
@@ -368,7 +398,7 @@ const Receipts = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {receipts.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={isAdmin ? 8 : 7} className="px-6 py-12 text-center text-gray-500">
                     <div className="flex flex-col items-center">
                       <svg className="h-12 w-12 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -424,6 +454,14 @@ const Receipts = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {receipt.user?.name || 'N/A'}
                     </td>
+                    {isAdmin && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {receipt.branch?.name
+                          ? <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-700">{receipt.branch.name}</span>
+                          : <span className="text-gray-400">—</span>
+                        }
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
                         {/* VER DETALLE */}

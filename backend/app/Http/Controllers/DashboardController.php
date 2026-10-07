@@ -13,12 +13,37 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
-        $period = $request->get('period', 'month'); // today, week, month, year
+        $period = $request->get('period', 'month');
         $startDate = $this->getStartDate($period);
         $endDate = Carbon::now();
+        $user = $request->user();
+
+        // Determinar filtro de sucursal
+        $branchId = null;
+        if (!$user->isAdmin() && $user->branch_id) {
+            // Empleado: solo ve su sucursal
+            $branchId = $user->branch_id;
+        } elseif ($user->isAdmin() && $request->filled('branch_id')) {
+            // Admin: puede filtrar por sucursal específica
+            $branchId = $request->branch_id;
+        }
+
+        $receiptQuery = function() use ($branchId) {
+            $q = Receipt::query();
+            if ($branchId) $q->where('branch_id', $branchId);
+            return $q;
+        };
+
+        $paymentQuery = function() use ($branchId) {
+            $q = Payment::query();
+            if ($branchId) {
+                $q->whereHas('receipt', fn($r) => $r->where('branch_id', $branchId));
+            }
+            return $q;
+        };
 
         // Métricas principales
-        $totalSales = Receipt::completed()
+        $totalSales = $receiptQuery()->active()
             ->byDateRange($startDate, $endDate)
             ->sum('total');
 
@@ -27,7 +52,7 @@ class DashboardController extends Controller
 
         $netProfit = $totalSales - $totalExpenses;
 
-        $salesCount = Receipt::completed()
+        $salesCount = $receiptQuery()->active()
             ->byDateRange($startDate, $endDate)
             ->count();
 
@@ -36,48 +61,48 @@ class DashboardController extends Controller
         // MÉTRICAS AVANZADAS DE PAGOS FRACCIONADOS
         
         // Anticipos recibidos en el período
-        $totalAdvances = Payment::where('type', 'anticipo')
+        $totalAdvances = $paymentQuery()->where('type', 'anticipo')
             ->whereBetween('paid_at', [$startDate, $endDate])
             ->sum('amount');
 
         // Pagos finales recibidos en el período
-        $finalPayments = Payment::where('type', 'pago_final')
+        $finalPayments = $paymentQuery()->where('type', 'pago_final')
             ->whereBetween('paid_at', [$startDate, $endDate])
             ->sum('amount');
 
         // Abonos recibidos en el período
-        $installmentPayments = Payment::where('type', 'abono')
+        $installmentPayments = $paymentQuery()->where('type', 'abono')
             ->whereBetween('paid_at', [$startDate, $endDate])
             ->sum('amount');
 
-        // Dinero pendiente de cobro (todos los recibos activos)
-        $pendingPayments = Receipt::whereIn('payment_status', ['sin_anticipo', 'con_anticipo'])
+        // Dinero pendiente de cobro
+        $pendingPayments = $receiptQuery()->whereIn('payment_status', ['sin_anticipo', 'con_anticipo'])
             ->where('status', '!=', 'cancelado')
             ->sum(DB::raw('total - paid_amount'));
 
         // Trabajos con anticipo (en proceso)
-        $receiptsWithAdvance = Receipt::where('payment_status', 'con_anticipo')
+        $receiptsWithAdvance = $receiptQuery()->where('payment_status', 'con_anticipo')
             ->where('status', '!=', 'cancelado')
             ->count();
-        
-        // Trabajos listos para entrega (esperando pago final)
-        $receiptsReadyForDelivery = Receipt::where('status', 'listo_entrega')->count();
 
-        // Trabajos solo cotizados (sin anticipo)
-        $receiptsOnlyQuoted = Receipt::where('payment_status', 'sin_anticipo')
+        // Trabajos listos para entrega
+        $receiptsReadyForDelivery = $receiptQuery()->where('status', 'listo_entrega')->count();
+
+        // Trabajos solo cotizados
+        $receiptsOnlyQuoted = $receiptQuery()->where('payment_status', 'sin_anticipo')
             ->where('status', 'cotizado')
             ->count();
 
         // Promedio de días entre anticipo y pago final
         $averagePaymentDays = $this->calculateAveragePaymentDays($startDate, $endDate);
 
-        // Flujo de caja proyectado (trabajos con anticipo pendientes de completar)
-        $projectedCashFlow = Receipt::where('payment_status', 'con_anticipo')
+        // Flujo de caja proyectado
+        $projectedCashFlow = $receiptQuery()->where('payment_status', 'con_anticipo')
             ->where('status', '!=', 'cancelado')
             ->sum(DB::raw('total - paid_amount'));
 
         // Ventas por día (período seleccionado)
-        $salesByDay = Receipt::completed()
+        $salesByDay = $receiptQuery()->active()
             ->select(
                 DB::raw('DATE(receipt_date) as date'),
                 DB::raw('SUM(total) as total'),
@@ -88,8 +113,8 @@ class DashboardController extends Controller
             ->orderBy('date')
             ->get();
 
-        // Pagos por día (últimos 30 días) - NUEVO GRÁFICO
-        $paymentsByDay = Payment::select(
+        // Pagos por día (últimos 30 días)
+        $paymentsByDay = $paymentQuery()->select(
                 DB::raw('DATE(paid_at) as date'),
                 DB::raw('SUM(amount) as total'),
                 DB::raw('COUNT(*) as count')
@@ -99,8 +124,8 @@ class DashboardController extends Controller
             ->orderBy('date')
             ->get();
 
-        // Distribución de tipos de pagos - NUEVO GRÁFICO
-        $paymentTypeDistribution = Payment::select('type', DB::raw('SUM(amount) as total'))
+        // Distribución de tipos de pagos
+        $paymentTypeDistribution = $paymentQuery()->select('type', DB::raw('SUM(amount) as total'))
             ->whereBetween('paid_at', [$startDate, $endDate])
             ->groupBy('type')
             ->get()
@@ -112,8 +137,8 @@ class DashboardController extends Controller
                 ];
             });
 
-        // Métodos de pago más usados - NUEVO GRÁFICO
-        $paymentMethods = Payment::select('payment_method', DB::raw('COUNT(*) as count'), DB::raw('SUM(amount) as total'))
+        // Métodos de pago más usados
+        $paymentMethods = $paymentQuery()->select('payment_method', DB::raw('COUNT(*) as count'), DB::raw('SUM(amount) as total'))
             ->whereBetween('paid_at', [$startDate, $endDate])
             ->groupBy('payment_method')
             ->get()
@@ -148,8 +173,31 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
+        // Métricas por sucursal (solo para admin sin filtro de sucursal específica)
+        $branchMetrics = [];
+        if ($user->isAdmin() && !$branchId) {
+            $branchMetrics = \App\Models\Branch::where('is_active', true)
+                ->withCount(['receipts as total_receipts'])
+                ->get()
+                ->map(function($branch) use ($startDate, $endDate) {
+                    $sales = Receipt::where('branch_id', $branch->id)
+                        ->active()->byDateRange($startDate, $endDate)->sum('total');
+                    $pending = Receipt::where('branch_id', $branch->id)
+                        ->whereIn('payment_status', ['sin_anticipo', 'con_anticipo'])
+                        ->where('status', '!=', 'cancelado')
+                        ->sum(DB::raw('total - paid_amount'));
+                    return [
+                        'id'           => $branch->id,
+                        'name'         => $branch->name,
+                        'total_sales'  => round($sales, 2),
+                        'pending'      => round($pending, 2),
+                        'users_count'  => $branch->users()->count(),
+                    ];
+                });
+        }
+
         // Ventas recientes
-        $recentSales = Receipt::with(['user:id,name', 'payments'])
+        $recentSales = $receiptQuery()->with(['user:id,name', 'payments', 'branch:id,name'])
             ->orderBy('receipt_date', 'desc')
             ->limit(5)
             ->get();
@@ -177,9 +225,11 @@ class DashboardController extends Controller
         return response()->json([
             'period' => [
                 'start_date' => $startDate->format('Y-m-d'),
-                'end_date' => $endDate->format('Y-m-d'),
-                'label' => $this->getPeriodLabel($period),
+                'end_date'   => $endDate->format('Y-m-d'),
+                'label'      => $this->getPeriodLabel($period),
             ],
+            'branch_filter' => $branchId,
+            'branch_metrics' => $branchMetrics,
             'metrics' => [
                 // Métricas básicas
                 'total_sales' => round($totalSales, 2),
@@ -324,18 +374,29 @@ class DashboardController extends Controller
     {
         $startDate = $request->get('start_date', Carbon::now()->startOfMonth()->format('Y-m-d'));
         $endDate = $request->get('end_date', Carbon::now()->format('Y-m-d'));
+        $user = $request->user();
+
+        $branchId = null;
+        if (!$user->isAdmin() && $user->branch_id) {
+            $branchId = $user->branch_id;
+        } elseif ($user->isAdmin() && $request->filled('branch_id')) {
+            $branchId = $request->branch_id;
+        }
 
         // Ingresos
-        $sales = Receipt::completed()
-            ->byDateRange($startDate, $endDate)
-            ->get();
+        $salesQuery = Receipt::completed()->byDateRange($startDate, $endDate);
+        if ($branchId) $salesQuery->where('branch_id', $branchId);
+        $sales = $salesQuery->get();
 
         $totalIncome = $sales->sum('total');
         $salesTax = $sales->sum('tax');
         $salesDiscount = $sales->sum('discount');
 
-        // Gastos
-        $expenses = Expense::byDateRange($startDate, $endDate)->get();
+        // Gastos (no filtran por sucursal ya que Expense no tiene branch_id;
+        // empleados ven solo sus ventas pero gastos globales quedan en cero para ellos)
+        $expenses = $branchId && !$user->isAdmin()
+            ? collect()
+            : Expense::byDateRange($startDate, $endDate)->get();
         $expensesByCategory = $expenses->groupBy('category')
             ->map(function ($categoryExpenses) {
                 return $categoryExpenses->sum('amount');
@@ -348,8 +409,11 @@ class DashboardController extends Controller
         $profitMargin = $totalIncome > 0 ? ($grossProfit / $totalIncome) * 100 : 0;
 
         // Información adicional de pagos
-        $paymentsInfo = Payment::whereBetween('paid_at', [$startDate, $endDate])
-            ->selectRaw('
+        $paymentsQuery = Payment::whereBetween('paid_at', [$startDate, $endDate]);
+        if ($branchId) {
+            $paymentsQuery->whereHas('receipt', fn($q) => $q->where('branch_id', $branchId));
+        }
+        $paymentsInfo = $paymentsQuery->selectRaw('
                 SUM(CASE WHEN type = "anticipo" THEN amount ELSE 0 END) as total_advances,
                 SUM(CASE WHEN type = "pago_final" THEN amount ELSE 0 END) as total_finals,
                 SUM(CASE WHEN type = "abono" THEN amount ELSE 0 END) as total_installments,

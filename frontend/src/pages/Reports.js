@@ -3,6 +3,7 @@ import { receiptService } from '../services/receiptService';
 import { expenseService } from '../services/expenseService';
 import { dashboardService } from '../services/dashboardService';
 import { formatDate, formatCurrency, getDateRange } from '../utils/formatters';
+import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
 import {
   BarChart, Bar,
@@ -47,6 +48,8 @@ const DarkTooltip = ({ active, payload, label, labelKey, valueFormatter }) => {
 };
 
 const Reports = () => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('sales');
   const printRef = useRef();
@@ -359,7 +362,7 @@ const Reports = () => {
 
   const tabs = [
     { id: 'sales', name: 'Reporte de Ventas', icon: CurrencyDollarIcon },
-    { id: 'expenses', name: 'Reporte de Gastos', icon: ArrowTrendingDownIcon },
+    ...(isAdmin ? [{ id: 'expenses', name: 'Reporte de Gastos', icon: ArrowTrendingDownIcon }] : []),
     { id: 'profit', name: 'Utilidades y Pérdidas', icon: ArrowTrendingUpIcon },
   ];
 

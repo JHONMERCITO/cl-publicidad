@@ -6,6 +6,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { dashboardService } from '../services/dashboardService';
+import branchService from '../services/branchService';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import toast from 'react-hot-toast';
@@ -53,7 +54,10 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState('month');
   const [isSalesModalOpen, setIsSalesModalOpen] = useState(false);
+  const [branchFilter, setBranchFilter] = useState('');
+  const [branches, setBranches] = useState([]);
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   const formatDateForChart = (dateString, dataLength) => {
     const date = new Date(dateString);
@@ -66,12 +70,18 @@ const Dashboard = () => {
     return date.toLocaleDateString('es-BO', { month: 'short', day: 'numeric', year: '2-digit' });
   };
 
-  useEffect(() => { fetchDashboardData(); }, [period]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (isAdmin) branchService.getAll().then(res => setBranches(res.data)).catch(() => {});
+  }, [isAdmin]);
+
+  useEffect(() => { fetchDashboardData(); }, [period, branchFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const response = await dashboardService.getDashboardData({ period });
+      const params = { period };
+      if (branchFilter) params.branch_id = branchFilter;
+      const response = await dashboardService.getDashboardData(params);
       setDashboardData(response.data);
     } catch (error) {
       toast.error('Error al cargar los datos del dashboard');
@@ -134,7 +144,19 @@ const Dashboard = () => {
           <h2 className="text-2xl font-bold text-gray-900">Dashboard</h2>
           <p className="mt-0.5 text-sm text-gray-500">Bienvenido, {user?.name}</p>
         </div>
-        <div className="mt-4 md:mt-0">
+        <div className="mt-4 md:mt-0 flex items-center gap-3">
+          {isAdmin && branches.length > 0 && (
+            <select
+              value={branchFilter}
+              onChange={(e) => setBranchFilter(e.target.value)}
+              className="rounded-lg border-gray-200 shadow-sm text-sm focus:border-primary-400 focus:ring-primary-400 bg-white px-3 py-2"
+            >
+              <option value="">Todas las sucursales</option>
+              {branches.map(b => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          )}
           <select
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
@@ -151,8 +173,8 @@ const Dashboard = () => {
       {/* Métricas principales */}
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
         <MetricCard title="Ventas Totales"     value={formatCurrency(metrics.total_sales)}           icon={CurrencyDollarIcon}    accent="#22c55e" />
-        <MetricCard title="Gastos Totales"     value={formatCurrency(metrics.total_expenses)}        icon={ArrowTrendingDownIcon} accent="#ef4444" />
-        <MetricCard title="Utilidad Neta"      value={formatCurrency(metrics.net_profit)}            icon={metrics.net_profit >= 0 ? ArrowTrendingUpIcon : ArrowTrendingDownIcon} accent={metrics.net_profit >= 0 ? '#22c55e' : '#ef4444'} />
+        {isAdmin && <MetricCard title="Gastos Totales"     value={formatCurrency(metrics.total_expenses)}        icon={ArrowTrendingDownIcon} accent="#ef4444" />}
+        {isAdmin && <MetricCard title="Utilidad Neta"      value={formatCurrency(metrics.net_profit)}            icon={metrics.net_profit >= 0 ? ArrowTrendingUpIcon : ArrowTrendingDownIcon} accent={metrics.net_profit >= 0 ? '#22c55e' : '#ef4444'} />}
         <MetricCard title="Anticipos"          value={formatCurrency(metrics.total_advances || 0)}   icon={CurrencyDollarIcon}    accent="#3b82f6" />
         <MetricCard title="Por Cobrar"         value={formatCurrency(metrics.pending_payments || 0)} icon={ExclamationTriangleIcon} accent="#F5901E" />
         <MetricCard title="Listos Entrega"     value={String(metrics.receipts_ready_delivery || 0)} icon={ShoppingCartIcon}      accent="#8b5cf6" />
@@ -165,6 +187,33 @@ const Dashboard = () => {
         <MetricCard title="Con Anticipo"     value={String(metrics.receipts_with_advance || 0)}    icon={CurrencyDollarIcon}    accent="#06b6d4" small />
         <MetricCard title="Solo Cotizados"   value={String(metrics.receipts_only_quoted || 0)}     icon={ExclamationTriangleIcon} accent="#eab308" small />
       </div>
+
+      {/* Métricas por sucursal (admin, sin filtro de sucursal) */}
+      {isAdmin && !branchFilter && dashboardData?.branch_metrics?.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Por Sucursal</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {dashboardData.branch_metrics.map(branch => (
+              <div key={branch.id} className="bg-white rounded-xl shadow-sm p-4 border-l-4 border-primary-400">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-semibold text-gray-800">{branch.name}</p>
+                  <span className="text-xs text-gray-400">{branch.users_count} vendedor{branch.users_count !== 1 ? 'es' : ''}</span>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Ventas</span>
+                    <span className="font-semibold text-green-600">{formatCurrency(branch.total_sales)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Por cobrar</span>
+                    <span className="font-semibold text-orange-500">{formatCurrency(branch.pending)}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Gráficos principales */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -240,14 +289,16 @@ const Dashboard = () => {
           )}
         </ChartCard>
 
-        {/* Gastos por categoría — Donut */}
-        <ChartCard title={`Gastos por Categoría — ${periodLabel}`}>
-          {hasExpenses ? (
-            <DonutChart data={expensesData} dataKey="total" nameKey="category" colors={BRAND} />
-          ) : (
-            <EmptyChart icon={ChartPieIcon} label="No hay gastos en este período" />
-          )}
-        </ChartCard>
+        {/* Gastos por categoría — Donut (solo admin) */}
+        {isAdmin && (
+          <ChartCard title={`Gastos por Categoría — ${periodLabel}`}>
+            {hasExpenses ? (
+              <DonutChart data={expensesData} dataKey="total" nameKey="category" colors={BRAND} />
+            ) : (
+              <EmptyChart icon={ChartPieIcon} label="No hay gastos en este período" />
+            )}
+          </ChartCard>
+        )}
       </div>
 
       {/* Servicios más vendidos — Bar Chart con gradiente */}

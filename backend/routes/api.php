@@ -14,6 +14,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TimezoneController;
+use App\Http\Controllers\BranchController;
 
 /*
 |--------------------------------------------------------------------------
@@ -37,6 +38,9 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Perfil del usuario autenticado
     Route::put('/profile', [AuthController::class, 'updateProfile']);
+
+    // Sucursales (lectura para todos los autenticados)
+    Route::get('/branches', [BranchController::class, 'index']);
 
     // Configuraciones del sistema (lectura para todos)
     Route::get('/settings', [SettingsController::class, 'index']);
@@ -65,15 +69,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/receipts/{receipt}/payments', [PaymentController::class, 'addPayment']);
     Route::get('/reports/payments', [PaymentController::class, 'paymentsReport']);
     
-    // Gastos (todos los usuarios autenticados pueden ver, solo admin puede crear/editar)
-    Route::get('/expenses', [ExpenseController::class, 'index']);
-    Route::get('/expenses/categories', [ExpenseController::class, 'categories']); // Específica primero
-    Route::get('/expenses/{expense}', [ExpenseController::class, 'show']); // Genérica después
-    Route::get('/reports/expenses', [ExpenseController::class, 'expensesReport']);
-    
     // Rutas solo para administradores
     Route::middleware('role:admin')->group(function () {
-        
+
         // Registro de usuarios (solo admin)
         Route::post('/register', [AuthController::class, 'register']);
         
@@ -102,9 +100,19 @@ Route::middleware('auth:sanctum')->group(function () {
         
         // Gestión completa de gastos (solo admin)
         Route::post('/expenses', [ExpenseController::class, 'store']);
+        Route::get('/expenses', [ExpenseController::class, 'index']);
+        Route::get('/expenses/categories', [ExpenseController::class, 'categories']);
+        Route::get('/expenses/{expense}', [ExpenseController::class, 'show']);
+        Route::get('/reports/expenses', [ExpenseController::class, 'expensesReport']);
         Route::put('/expenses/{expense}', [ExpenseController::class, 'update']);
         Route::delete('/expenses/{expense}', [ExpenseController::class, 'destroy']);
         
+        // Gestión de sucursales (solo admin)
+        Route::post('/branches', [BranchController::class, 'store']);
+        Route::put('/branches/{branch}', [BranchController::class, 'update']);
+        Route::delete('/branches/{branch}', [BranchController::class, 'destroy']);
+        Route::get('/branches/{branch}/stats', [BranchController::class, 'stats']);
+
         // Configuraciones del sistema (solo admin)
         Route::put('/settings/company',       [SettingsController::class, 'updateCompany']);
         Route::put('/settings/receipts',      [SettingsController::class, 'updateReceipts']);

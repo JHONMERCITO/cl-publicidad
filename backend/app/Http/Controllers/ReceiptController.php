@@ -15,27 +15,36 @@ class ReceiptController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Receipt::with(['user:id,name', 'items']);
+        $user = $request->user();
+        $query = Receipt::with(['user:id,name', 'items', 'branch:id,name']);
 
-        // Filtros - solo aplicar si tienen valores
+        // Empleados solo ven su sucursal
+        if (!$user->isAdmin() && $user->branch_id) {
+            $query->where('branch_id', $user->branch_id);
+        }
+
+        // Filtros
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
-
+        if ($request->filled('payment_status')) {
+            $query->where('payment_status', $request->payment_status);
+        }
         if ($request->filled('customer')) {
             $query->where('customer_name', 'like', '%' . $request->customer . '%');
         }
-
         if ($request->filled('date_from')) {
             $query->whereDate('receipt_date', '>=', $request->date_from);
         }
-
         if ($request->filled('date_to')) {
             $query->whereDate('receipt_date', '<=', $request->date_to);
         }
-
         if ($request->filled('receipt_number')) {
             $query->where('receipt_number', 'like', '%' . $request->receipt_number . '%');
+        }
+        // Filtro por sucursal (solo admin puede filtrar por sucursal específica)
+        if ($user->isAdmin() && $request->filled('branch_id')) {
+            $query->where('branch_id', $request->branch_id);
         }
 
         $receipts = $query->orderBy('receipt_date', 'desc')
@@ -108,6 +117,7 @@ class ReceiptController extends Controller
                 'status' => 'cotizado',
                 'notes' => $request->notes,
                 'user_id' => $request->user()->id,
+                'branch_id' => $request->user()->branch_id,
                 'receipt_date' => $request->receipt_date,
             ]);
 
@@ -156,7 +166,7 @@ class ReceiptController extends Controller
 
     public function show(Receipt $receipt)
     {
-        return response()->json($receipt->load(['items', 'user:id,name', 'payments']));
+        return response()->json($receipt->load(['items', 'user:id,name', 'payments', 'branch:id,name']));
     }
 
     public function update(Request $request, Receipt $receipt)
@@ -279,10 +289,18 @@ class ReceiptController extends Controller
             ], 422);
         }
 
-        $receipts = Receipt::completed()
+        $user = $request->user();
+        $receiptQuery = Receipt::completed()
             ->byDateRange($request->start_date, $request->end_date)
-            ->with(['items', 'payments'])
-            ->get();
+            ->with(['items', 'payments']);
+
+        if (!$user->isAdmin() && $user->branch_id) {
+            $receiptQuery->where('branch_id', $user->branch_id);
+        } elseif ($user->isAdmin() && $request->filled('branch_id')) {
+            $receiptQuery->where('branch_id', $request->branch_id);
+        }
+
+        $receipts = $receiptQuery->get();
 
         $totalSales = $receipts->sum('total');
         $totalReceipts = $receipts->count();

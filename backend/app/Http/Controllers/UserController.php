@@ -16,14 +16,12 @@ class UserController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = User::query();
-            
-            // Filtro por rol si se especifica
+            $query = User::with('branch:id,name');
+
             if ($request->has('role')) {
                 $query->where('role', $request->role);
             }
-            
-            // Filtro por búsqueda
+
             if ($request->has('search')) {
                 $search = $request->search;
                 $query->where(function($q) use ($search) {
@@ -31,7 +29,7 @@ class UserController extends Controller
                       ->orWhere('email', 'like', "%{$search}%");
                 });
             }
-            
+
             $users = $query->orderBy('created_at', 'desc')->get();
             
             return response()->json($users);
@@ -67,10 +65,11 @@ class UserController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'name' => 'required|string|max:255',
-                'email' => 'required|string|email|max:255|unique:users',
-                'password' => ['required', 'string', 'min:6', 'regex:/^(?=.*[a-zA-Z])(?=.*[0-9]).+$/'],
-                'role' => 'required|in:admin,employee',
+                'name'      => 'required|string|max:255',
+                'email'     => 'required|string|email|max:255|unique:users',
+                'password'  => ['required', 'string', 'min:6', 'regex:/^(?=.*[a-zA-Z])(?=.*[0-9]).+$/'],
+                'role'      => 'required|in:admin,employee',
+                'branch_id' => 'nullable|exists:branches,id',
             ]);
 
             if ($validator->fails()) {
@@ -81,10 +80,11 @@ class UserController extends Controller
             }
 
             $user = User::create([
-                'name' => $request->name,
-                'email' => $request->email,
-                'password' => Hash::make($request->password),
-                'role' => $request->role,
+                'name'      => $request->name,
+                'email'     => $request->email,
+                'password'  => Hash::make($request->password),
+                'role'      => $request->role,
+                'branch_id' => $request->branch_id,
             ]);
 
             return response()->json([
@@ -109,16 +109,11 @@ class UserController extends Controller
             $user = User::findOrFail($id);
 
             $validator = Validator::make($request->all(), [
-                'name' => 'required|string|max:255',
-                'email' => [
-                    'required',
-                    'string',
-                    'email',
-                    'max:255',
-                    Rule::unique('users')->ignore($user->id),
-                ],
-                'password' => ['nullable', 'string', 'min:6', 'regex:/^(?=.*[a-zA-Z])(?=.*[0-9]).+$/'],
-                'role' => 'required|in:admin,employee',
+                'name'      => 'required|string|max:255',
+                'email'     => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+                'password'  => ['nullable', 'string', 'min:6', 'regex:/^(?=.*[a-zA-Z])(?=.*[0-9]).+$/'],
+                'role'      => 'required|in:admin,employee',
+                'branch_id' => 'nullable|exists:branches,id',
             ]);
 
             if ($validator->fails()) {
@@ -128,11 +123,11 @@ class UserController extends Controller
                 ], 422);
             }
 
-            $user->name = $request->name;
-            $user->email = $request->email;
-            $user->role = $request->role;
+            $user->name      = $request->name;
+            $user->email     = $request->email;
+            $user->role      = $request->role;
+            $user->branch_id = $request->branch_id;
 
-            // Solo actualizar contraseña si se proporciona
             if ($request->filled('password')) {
                 $user->password = Hash::make($request->password);
             }

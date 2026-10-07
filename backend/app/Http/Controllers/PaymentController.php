@@ -175,10 +175,17 @@ class PaymentController extends Controller
             $startDate = $request->get('start_date', now()->startOfMonth()->format('Y-m-d'));
             $endDate = $request->get('end_date', now()->endOfMonth()->format('Y-m-d'));
 
-            $payments = Payment::with('receipt')
-                ->whereBetween('paid_at', [$startDate, $endDate])
-                ->orderBy('paid_at', 'desc')
-                ->get();
+            $user = $request->user();
+            $paymentQuery = Payment::with('receipt')
+                ->whereBetween('paid_at', [$startDate, $endDate]);
+
+            if (!$user->isAdmin() && $user->branch_id) {
+                $paymentQuery->whereHas('receipt', fn($q) => $q->where('branch_id', $user->branch_id));
+            } elseif ($user->isAdmin() && $request->filled('branch_id')) {
+                $paymentQuery->whereHas('receipt', fn($q) => $q->where('branch_id', $request->branch_id));
+            }
+
+            $payments = $paymentQuery->orderBy('paid_at', 'desc')->get();
 
             $summary = [
                 'total_payments' => $payments->count(),
