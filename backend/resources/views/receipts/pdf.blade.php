@@ -22,13 +22,13 @@
         }
 
         .header-logo-cell {
-            width: 110px;
-            padding: 10px 10px 10px 16px;
+            width: 130px;
+            padding: 8px 10px 8px 16px;
             vertical-align: middle;
         }
 
         .header-logo {
-            width: 90px;
+            width: 110px;
             height: auto;
             background-color: #ffffff;
             border-radius: 6px;

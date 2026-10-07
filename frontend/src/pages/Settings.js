@@ -308,18 +308,6 @@ const Settings = () => {
                     placeholder="Ej: Gracias por confiar en CL Publicidad y Diseño!"
                   />
                 </div>
-                <div className="sm:col-span-2 flex items-center space-x-3">
-                  <input
-                    type="checkbox"
-                    id="include_logo"
-                    checked={receipts.include_logo}
-                    onChange={e => setReceipts({ ...receipts, include_logo: e.target.checked })}
-                    className="h-4 w-4 text-primary-600 border-gray-300 rounded"
-                  />
-                  <label htmlFor="include_logo" className="text-sm text-gray-900">
-                    Incluir logo en los recibos PDF
-                  </label>
-                </div>
               </div>
               <Button
                 onClick={() => save('Configuración de facturación guardada', settingsService.updateReceipts, receipts)}
