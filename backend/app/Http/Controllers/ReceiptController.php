@@ -257,16 +257,19 @@ class ReceiptController extends Controller
 
     public function generatePdf(Receipt $receipt)
     {
-        $receipt->load(['items', 'user', 'payments']);
+        $receipt->load(['items', 'user', 'payments', 'branch']);
+
+        $branch = $receipt->branch;
 
         $company = [
-            'name'         => \App\Models\Setting::get('company_name', 'Big Arte'),
-            'address'      => \App\Models\Setting::get('company_address', 'Sucursal - Av. Cañoto'),
-            'phone'        => \App\Models\Setting::get('company_phone', '73149544'),
+            'name'         => \App\Models\Setting::get('company_name', 'CL Publicidad'),
+            'address'      => ($branch && $branch->address) ? $branch->address : \App\Models\Setting::get('company_address', ''),
+            'phone'        => ($branch && $branch->phone)   ? $branch->phone   : \App\Models\Setting::get('company_phone', ''),
             'email'        => \App\Models\Setting::get('company_email', ''),
             'tax_id'       => \App\Models\Setting::get('company_tax_id', ''),
-            'footer_text'  => \App\Models\Setting::get('receipt_footer_text', 'Gracias por confiar en Big Arte!'),
-            'include_logo' => (bool) \App\Models\Setting::get('receipt_include_logo', '1'),
+            'footer_text'  => \App\Models\Setting::get('receipt_footer_text', 'Gracias por confiar en CL Publicidad!'),
+            'include_logo' => true,
+            'branch_name'  => $branch ? $branch->name : null,
         ];
 
         $pdf = Pdf::loadView('receipts.pdf', compact('receipt', 'company'))

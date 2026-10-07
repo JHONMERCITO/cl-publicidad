@@ -386,7 +386,11 @@
         </td>
         <td class="header-info-cell">
             <div class="company-name">{{ strtoupper($company['name']) }}</div>
-            <div class="company-sub">Publicidad &amp; Marketing</div>
+            @if(!empty($company['branch_name']))
+                <div class="company-sub">Sucursal: {{ $company['branch_name'] }}</div>
+            @else
+                <div class="company-sub">Publicidad &amp; Marketing</div>
+            @endif
             @if(!empty($company['phone']))
                 <div class="company-addr">Tel: {{ $company['phone'] }}</div>
             @endif
