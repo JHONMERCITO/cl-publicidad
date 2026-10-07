@@ -16,7 +16,7 @@
         /* ── CABECERA ── */
         .header-table {
             width: 100%;
-            background-color: #F5901E;
+            background-color: #A01520;
             padding: 0;
             margin-bottom: 18px;
         }
@@ -93,14 +93,14 @@
         /* Metadatos */
         .meta-table {
             width: 100%;
-            border: 1px solid #F5901E;
+            border: 1px solid #A01520;
             border-collapse: collapse;
             margin-bottom: 14px;
         }
 
         .meta-table td {
             padding: 8px 12px;
-            border-right: 1px solid #FFD9A8;
+            border-right: 1px solid #FBBDBD;
             width: 33.33%;
             vertical-align: top;
         }
@@ -111,7 +111,7 @@
             font-size: 8px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            color: #F5901E;
+            color: #A01520;
             font-weight: bold;
             margin-bottom: 3px;
         }
@@ -132,8 +132,8 @@
 
         /* Cliente */
         .customer-box {
-            border-left: 4px solid #F5901E;
-            background-color: #FFF8F0;
+            border-left: 4px solid #A01520;
+            background-color: #FEF2F2;
             padding: 10px 14px;
             margin-bottom: 14px;
         }
@@ -142,7 +142,7 @@
             font-size: 8px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            color: #F5901E;
+            color: #A01520;
             font-weight: bold;
             margin-bottom: 5px;
         }
@@ -150,7 +150,7 @@
         .customer-name {
             font-size: 14px;
             font-weight: bold;
-            color: #1A6464;
+            color: #1C476A;
         }
 
         .customer-detail {
@@ -168,7 +168,7 @@
         }
 
         .items-table th {
-            background-color: #009E9A;
+            background-color: #2C6DA0;
             color: #fff;
             padding: 8px 10px;
             text-align: left;
@@ -183,7 +183,7 @@
         }
 
         .items-table .row-even td {
-            background-color: #F0FAF9;
+            background-color: #EBF2F8;
         }
 
         .text-right  { text-align: right; }
@@ -211,9 +211,9 @@
             font-size: 9px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            color: #009E9A;
+            color: #2C6DA0;
             font-weight: bold;
-            border-bottom: 2px solid #009E9A;
+            border-bottom: 2px solid #2C6DA0;
             padding-bottom: 4px;
             margin-bottom: 8px;
         }
@@ -223,7 +223,7 @@
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 4px;
-            background-color: #E6F7F7;
+            background-color: #EBF2F8;
         }
 
         .payment-row-table td {
@@ -231,9 +231,9 @@
             font-size: 10px;
         }
 
-        .pay-type   { font-weight: bold; color: #005F5C; width: 35%; }
-        .pay-method { color: #007E7B; text-align: center; width: 35%; }
-        .pay-amount { text-align: right; font-weight: bold; color: #005F5C; width: 30%; }
+        .pay-type   { font-weight: bold; color: #1C476A; width: 35%; }
+        .pay-method { color: #245A85; text-align: center; width: 35%; }
+        .pay-amount { text-align: right; font-weight: bold; color: #1C476A; width: 30%; }
 
         /* Totales */
         .totals-table {
@@ -250,7 +250,7 @@
         .totals-table td:last-child { text-align: right; font-weight: bold; }
 
         .row-total td {
-            background-color: #F5901E;
+            background-color: #A01520;
             color: #fff;
             font-size: 13px;
             font-weight: bold;
@@ -258,9 +258,16 @@
             padding: 8px 10px;
         }
 
+        .row-paid td {
+            background-color: #EBF2F8;
+            color: #245A85;
+            font-weight: bold;
+            border-bottom: none;
+        }
+
         .row-pending td {
-            background-color: #FFF3CD;
-            color: #856404;
+            background-color: #FEE2E2;
+            color: #991B1B;
             font-weight: bold;
             border-bottom: none;
         }
@@ -296,7 +303,7 @@
         }
 
         .sign-line {
-            border-bottom: 2px solid #009E9A;
+            border-bottom: 2px solid #2C6DA0;
             height: 70px;
             margin-bottom: 5px;
         }
@@ -312,7 +319,7 @@
         /* Footer */
         .footer {
             margin-top: 24px;
-            background-color: #F5901E;
+            background-color: #A01520;
             padding: 10px 20px;
             text-align: center;
         }
@@ -367,18 +374,18 @@
 @endphp
 
 {{-- CABECERA --}}
-<table class="header-table" cellpadding="0" cellspacing="0">
+<table class="header-table" cellpadding="0" cellspacing="0" bgcolor="#A01520">
     <tr>
         <td class="header-logo-cell">
             @if(($company['include_logo'] ?? true) && file_exists(public_path('images/logo.png')))
                 <img src="{{ $logoPath }}" class="header-logo" alt="{{ $company['name'] }}">
             @else
-                <div style="width:64px;height:64px;border-radius:50%;background:#fff3;border:3px solid #fff;text-align:center;line-height:58px;font-size:18px;font-weight:bold;color:#fff;">BA</div>
+                <div style="width:64px;height:64px;border-radius:50%;background:#fff3;border:3px solid #fff;text-align:center;line-height:58px;font-size:18px;font-weight:bold;color:#fff;">CL</div>
             @endif
         </td>
         <td class="header-info-cell">
             <div class="company-name">{{ strtoupper($company['name']) }}</div>
-            <div class="company-sub">Gigantografia &amp; Rotulacion</div>
+            <div class="company-sub">Publicidad &amp; Marketing</div>
             @if(!empty($company['phone']))
                 <div class="company-addr">Tel: {{ $company['phone'] }}</div>
             @endif
@@ -440,7 +447,7 @@
     {{-- SERVICIOS --}}
     <table class="items-table" cellpadding="0" cellspacing="0">
         <thead>
-            <tr>
+            <tr bgcolor="#2C6DA0">
                 <th>Servicio / Descripcion</th>
                 <th class="text-center" style="width:70px;">Cantidad</th>
                 <th class="text-right" style="width:90px;">Precio Unit.</th>
@@ -498,12 +505,12 @@
                             <td>-{{ $formatCurrency($receipt->discount) }}</td>
                         </tr>
                     @endif
-                    <tr class="row-total">
+                    <tr class="row-total" bgcolor="#A01520">
                         <td>TOTAL</td>
                         <td>{{ $formatCurrency($receipt->total) }}</td>
                     </tr>
                     @if($receipt->paid_amount > 0 && $receipt->paid_amount < $receipt->total)
-                        <tr class="row-pending">
+                        <tr class="row-paid">
                             <td>Pagado</td>
                             <td>{{ $formatCurrency($receipt->paid_amount) }}</td>
                         </tr>
@@ -541,7 +548,7 @@
 </div>
 
 {{-- FOOTER --}}
-<div class="footer">
+<div class="footer" style="margin-top:24px;background-color:#A01520 !important;padding:10px 20px;text-align:center;">
     <div class="footer-tagline">{{ $company['footer_text'] ?? 'Gracias por confiar en Big Arte!' }}</div>
     <div class="footer-sub">Este documento es un recibo interno, no constituye factura fiscal.</div>
     <div class="footer-sub">Generado el {{ now()->format('d/m/Y H:i') }}</div>
