@@ -30,6 +30,9 @@
         .header-logo {
             width: 90px;
             height: auto;
+            background-color: #ffffff;
+            border-radius: 6px;
+            padding: 4px;
         }
 
         .header-info-cell {
