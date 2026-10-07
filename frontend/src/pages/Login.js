@@ -45,14 +45,12 @@ const Login = () => {
           style={{ background: '#fff' }} />
 
         <div className="relative z-10 text-center px-12">
-          <div className="inline-block bg-white rounded-3xl px-8 py-6 shadow-2xl mb-8">
-            <img
-              src="/logo.png"
-              alt="CL Publicidad y Diseño"
-              className="h-44 w-auto mx-auto"
-              onError={(e) => { e.target.parentElement.style.display = 'none'; }}
-            />
-          </div>
+          <img
+            src="/logo.png"
+            alt="CL Publicidad y Diseño"
+            className="h-52 w-auto mx-auto mb-8 drop-shadow-2xl"
+            onError={(e) => { e.target.style.display = 'none'; }}
+          />
           <h1 className="text-4xl font-bold text-white mb-4 drop-shadow">
             CL Publicidad y Diseño
           </h1>
