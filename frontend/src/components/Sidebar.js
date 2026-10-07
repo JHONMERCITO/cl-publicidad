@@ -88,7 +88,7 @@ const SidebarContent = ({ navigation, location, user, onLogout, onNavClick }) =>
         <img
           src="/logo.png"
           alt="CL Publicidad y Diseño"
-          className="h-14 w-14 rounded-full object-cover border-2 border-white shadow-md mr-3"
+          className="h-16 w-auto object-contain mix-blend-multiply mr-3"
           onError={(e) => { e.target.style.display = 'none'; }}
         />
         <h1 className="text-xl font-bold text-white drop-shadow">CL Publicidad</h1>

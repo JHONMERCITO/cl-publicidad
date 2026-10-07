@@ -48,7 +48,7 @@ const Login = () => {
           <img
             src="/logo.png"
             alt="CL Publicidad y Diseño"
-            className="h-40 w-auto mx-auto mb-8 drop-shadow-xl"
+            className="h-52 w-auto mx-auto mb-8 mix-blend-multiply"
             onError={(e) => { e.target.style.display = 'none'; }}
           />
           <h1 className="text-4xl font-bold text-white mb-4 drop-shadow">
