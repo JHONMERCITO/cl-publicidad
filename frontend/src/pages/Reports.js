@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { receiptService } from '../services/receiptService';
 import { expenseService } from '../services/expenseService';
 import { dashboardService } from '../services/dashboardService';
@@ -15,13 +15,7 @@ import {
   CurrencyDollarIcon,
   ArrowTrendingUpIcon,
   ArrowTrendingDownIcon,
-  PrinterIcon,
-  DocumentArrowDownIcon,
-  TableCellsIcon,
 } from '@heroicons/react/24/outline';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import * as XLSX from 'xlsx';
 
 // Paleta de marca
 const BRAND = ['#F5901E', '#009E9A', '#6366F1', '#EC4899', '#14B8A6', '#F59E0B', '#8B5CF6'];
@@ -52,8 +46,6 @@ const Reports = () => {
   const isAdmin = user?.role === 'admin';
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('sales');
-  const printRef = useRef();
-  
   const [dateRange, setDateRange] = useState({
     start_date: getDateRange('month').startDate,
     end_date: getDateRange('month').endDate,
@@ -120,243 +112,12 @@ const Reports = () => {
     setProfitLossReport(response.data);
   };
 
-  // Función para generar PDF
-  const exportToPDF = async () => {
-    try {
-      setLoading(true);
-      
-      const element = printRef.current;
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff'
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 295; // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      // Agregar logo y encabezado
-      pdf.setFontSize(20);
-      pdf.setTextColor(40);
-      pdf.text('CL Publicidad y Diseño', 20, 15);
-      
-      pdf.setFontSize(14);
-      pdf.text(getReportTitle(), 20, 25);
-      
-      pdf.setFontSize(10);
-      pdf.text(`Período: ${formatDate(dateRange.start_date)} - ${formatDate(dateRange.end_date)}`, 20, 35);
-      pdf.text(`Generado: ${formatDate(new Date().toISOString())}`, 20, 42);
-
-      // Agregar el contenido del reporte
-      position = 50;
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight - position;
-
-      // Agregar páginas adicionales si es necesario
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight + 50;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-
-      // Guardar PDF
-      const timestamp = new Date().toISOString().slice(0, 10);
-      const filename = `${getReportFilename()}_${timestamp}.pdf`;
-      pdf.save(filename);
-
-    } catch (error) {
-      alert('Error al generar el PDF. Intenta de nuevo.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Función para exportar a Excel
-  const exportToExcel = () => {
-    try {
-      const workbook = XLSX.utils.book_new();
-      
-      if (activeTab === 'sales' && salesReport) {
-        exportSalesToExcel(workbook, salesReport);
-      } else if (activeTab === 'expenses' && expensesReport) {
-        exportExpensesToExcel(workbook, expensesReport);
-      } else if (activeTab === 'profit' && profitLossReport) {
-        exportProfitLossToExcel(workbook, profitLossReport);
-      }
-
-      // Guardar archivo Excel
-      const timestamp = new Date().toISOString().slice(0, 10);
-      const filename = `${getReportFilename()}_${timestamp}.xlsx`;
-      XLSX.writeFile(workbook, filename);
-
-    } catch (error) {
-      alert('Error al generar el archivo Excel. Intenta de nuevo.');
-    }
-  };
-
-  const exportSalesToExcel = (workbook, report) => {
-    // Hoja de resumen
-    const summaryData = [
-      ['REPORTE DE VENTAS'],
-      [`Período: ${formatDate(dateRange.start_date)} - ${formatDate(dateRange.end_date)}`],
-      [''],
-      ['RESUMEN'],
-      ['Total de Ventas', report.summary?.total_sales || 0],
-      ['Número de Recibos', report.summary?.total_receipts || 0],
-      ['Ticket Promedio', report.summary?.average_ticket || 0],
-    ];
-    
-    const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Resumen');
-
-    // Hoja de servicios más vendidos
-    const topServices = report.top_services && typeof report.top_services === 'object' 
-      ? Object.values(report.top_services).filter(item => item && item.name)
-      : [];
-    
-    const servicesData = [
-      ['SERVICIOS MÁS VENDIDOS'],
-      [''],
-      ['Servicio', 'Cantidad', 'Total']
-    ];
-    
-    topServices.forEach(service => {
-      servicesData.push([service.name, service.quantity, service.total]);
-    });
-    
-    const servicesSheet = XLSX.utils.aoa_to_sheet(servicesData);
-    XLSX.utils.book_append_sheet(workbook, servicesSheet, 'Servicios');
-
-    // Hoja de ventas detalladas
-    const salesData = [
-      ['VENTAS DETALLADAS'],
-      [''],
-      ['Recibo', 'Cliente', 'Total', 'Fecha', 'Vendedor']
-    ];
-    
-    (report.receipts || []).forEach(receipt => {
-      salesData.push([
-        receipt.receipt_number,
-        receipt.customer_name,
-        receipt.total,
-        formatDate(receipt.receipt_date),
-        receipt.user?.name || 'Sin asignar'
-      ]);
-    });
-    
-    const salesSheet = XLSX.utils.aoa_to_sheet(salesData);
-    XLSX.utils.book_append_sheet(workbook, salesSheet, 'Ventas Detalladas');
-  };
-
-  const exportExpensesToExcel = (workbook, report) => {
-    // Hoja de resumen
-    const summaryData = [
-      ['REPORTE DE GASTOS'],
-      [`Período: ${formatDate(dateRange.start_date)} - ${formatDate(dateRange.end_date)}`],
-      [''],
-      ['RESUMEN'],
-      ['Total de Gastos', report.summary?.total_expenses || 0],
-      ['Número de Gastos', report.summary?.total_count || 0],
-      ['Gasto Promedio', report.summary?.average_expense || 0],
-    ];
-    
-    const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Resumen');
-
-    // Hoja de gastos por categoría
-    const categoryData = [
-      ['GASTOS POR CATEGORÍA'],
-      [''],
-      ['Categoría', 'Total', 'Cantidad']
-    ];
-    
-    Object.entries(report.by_category || {}).forEach(([category, data]) => {
-      categoryData.push([category, data?.total || 0, data?.count || 0]);
-    });
-    
-    const categorySheet = XLSX.utils.aoa_to_sheet(categoryData);
-    XLSX.utils.book_append_sheet(workbook, categorySheet, 'Por Categoría');
-
-    // Hoja de gastos detallados
-    const expensesData = [
-      ['GASTOS DETALLADOS'],
-      [''],
-      ['Descripción', 'Categoría', 'Monto', 'Fecha', 'Proveedor']
-    ];
-    
-    Object.entries(report.by_category || {}).forEach(([category, data]) => {
-      (data?.expenses || []).forEach(expense => {
-        expensesData.push([
-          expense.description,
-          category,
-          expense.amount,
-          formatDate(expense.expense_date),
-          expense.supplier || 'Sin proveedor'
-        ]);
-      });
-    });
-    
-    const expensesSheet = XLSX.utils.aoa_to_sheet(expensesData);
-    XLSX.utils.book_append_sheet(workbook, expensesSheet, 'Gastos Detallados');
-  };
-
-  const exportProfitLossToExcel = (workbook, report) => {
-    // Estado de resultados
-    const profitLossData = [
-      ['ESTADO DE RESULTADOS'],
-      [`Período: ${formatDate(dateRange.start_date)} - ${formatDate(dateRange.end_date)}`],
-      [''],
-      ['INGRESOS'],
-      ['Ventas Totales', report.income?.total_sales || 0],
-      ['Total Ingresos', report.income?.net_income || 0],
-      [''],
-      ['GASTOS']
-    ];
-    
-    Object.entries(report.expenses?.by_category || {}).forEach(([category, amount]) => {
-      profitLossData.push([category, amount]);
-    });
-    
-    profitLossData.push(
-      ['Total Gastos', report.expenses?.total || 0],
-      [''],
-      ['RESULTADO'],
-      ['Utilidad Bruta', report.profit?.gross_profit || 0],
-      ['Margen de Utilidad (%)', (report.profit?.profit_margin || 0).toFixed(2)]
-    );
-    
-    const profitSheet = XLSX.utils.aoa_to_sheet(profitLossData);
-    XLSX.utils.book_append_sheet(workbook, profitSheet, 'Estado de Resultados');
-  };
-
-  // Función simple para imprimir
-  const handlePrint = () => {
-    window.print();
-  };
-
   const getReportTitle = () => {
     switch (activeTab) {
       case 'sales': return 'Reporte de Ventas';
       case 'expenses': return 'Reporte de Gastos';
       case 'profit': return 'Estado de Resultados';
       default: return 'Reporte';
-    }
-  };
-
-  const getReportFilename = () => {
-    switch (activeTab) {
-      case 'sales': return 'reporte_ventas';
-      case 'expenses': return 'reporte_gastos';
-      case 'profit': return 'estado_resultados';
-      default: return 'reporte';
     }
   };
 
@@ -377,20 +138,6 @@ const Reports = () => {
           <p className="mt-1 text-sm text-gray-500">
             {getReportTitle()} • {formatDate(dateRange.start_date)} - {formatDate(dateRange.end_date)}
           </p>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-3 md:mt-0 md:ml-4 no-print">
-          <Button variant="secondary" onClick={exportToExcel}>
-            <TableCellsIcon className="h-4 w-4 mr-2" />
-            Excel
-          </Button>
-          <Button variant="secondary" onClick={exportToPDF}>
-            <DocumentArrowDownIcon className="h-4 w-4 mr-2" />
-            PDF
-          </Button>
-          <Button onClick={handlePrint}>
-            <PrinterIcon className="h-4 w-4 mr-2" />
-            Imprimir
-          </Button>
         </div>
       </div>
 
