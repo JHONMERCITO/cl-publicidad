@@ -397,6 +397,9 @@
             @if(!empty($company['address']))
                 <div class="company-addr">{{ $company['address'] }}</div>
             @endif
+            @if(!empty($company['tax_id']))
+                <div class="company-addr">NIT: {{ $company['tax_id'] }}</div>
+            @endif
             @if(!empty($company['email']))
                 <div class="company-addr">{{ $company['email'] }}</div>
             @endif
