@@ -1,14 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/Button';
 import toast from 'react-hot-toast';
 import { settingsService } from '../services/settingsService';
+import branchService from '../services/branchService';
 import {
   BuildingStorefrontIcon,
   DocumentTextIcon,
-  BellIcon,
-  ShieldCheckIcon,
   UserIcon,
+  BuildingOfficeIcon,
+  PencilIcon,
+  TrashIcon,
+  PlusIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
 
 const Settings = () => {
@@ -16,6 +20,14 @@ const Settings = () => {
   const [loading, setLoading]     = useState(false);
   const [fetching, setFetching]   = useState(true);
   const { user, setUser }         = useAuth();
+  const isAdmin = user?.role === 'admin';
+
+  // ── Sucursales state ──────────────────────────────────────────────────────────
+  const [branches, setBranches]         = useState([]);
+  const [branchLoading, setBranchLoading] = useState(false);
+  const [showBranchForm, setShowBranchForm] = useState(false);
+  const [editingBranch, setEditingBranch]   = useState(null);
+  const [branchForm, setBranchForm]     = useState({ name: '', address: '', phone: '' });
 
   const [company, setCompany] = useState({
     name: '', address: '', phone: '', email: '', tax_id: '',
@@ -25,17 +37,74 @@ const Settings = () => {
     prefix: 'REC', tax_rate: 0, include_logo: true, footer_text: '',
   });
 
-  const [notifications, setNotifications] = useState({
-    daily_reports: false, new_sale: true, expense_alerts: true,
-  });
-
-  const [security, setSecurity] = useState({
-    session_timeout: 60, login_attempts: 5, require_password_change: false,
-  });
-
   const [profile, setProfile] = useState({
     name: '', current_password: '', new_password: '', new_password_confirmation: '',
   });
+
+  // ── Sucursales handlers ───────────────────────────────────────────────────────
+  const fetchBranches = useCallback(async () => {
+    setBranchLoading(true);
+    try {
+      const res = await branchService.getAll();
+      setBranches(res.data);
+    } catch {
+      toast.error('Error al cargar sucursales');
+    } finally {
+      setBranchLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'branches') fetchBranches();
+  }, [activeTab, fetchBranches]);
+
+  const handleBranchSubmit = async (e) => {
+    e.preventDefault();
+    setBranchLoading(true);
+    try {
+      if (editingBranch) {
+        await branchService.update(editingBranch.id, branchForm);
+        toast.success('Sucursal actualizada');
+      } else {
+        await branchService.create(branchForm);
+        toast.success('Sucursal creada');
+      }
+      setShowBranchForm(false);
+      setEditingBranch(null);
+      setBranchForm({ name: '', address: '', phone: '' });
+      fetchBranches();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Error al guardar sucursal');
+    } finally {
+      setBranchLoading(false);
+    }
+  };
+
+  const handleEditBranch = (branch) => {
+    setEditingBranch(branch);
+    setBranchForm({ name: branch.name, address: branch.address || '', phone: branch.phone || '' });
+    setShowBranchForm(true);
+  };
+
+  const handleDeleteBranch = async (branch) => {
+    if (!window.confirm(`¿Eliminar la sucursal "${branch.name}"?`)) return;
+    setBranchLoading(true);
+    try {
+      await branchService.delete(branch.id);
+      toast.success('Sucursal eliminada');
+      fetchBranches();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'No se puede eliminar: tiene usuarios asignados');
+    } finally {
+      setBranchLoading(false);
+    }
+  };
+
+  const handleCancelBranchForm = () => {
+    setShowBranchForm(false);
+    setEditingBranch(null);
+    setBranchForm({ name: '', address: '', phone: '' });
+  };
 
   // Cargar todas las configuraciones al montar
   useEffect(() => {
@@ -43,8 +112,6 @@ const Settings = () => {
       .then(data => {
         setCompany(data.company);
         setReceipts(data.receipts);
-        setNotifications(data.notifications);
-        setSecurity(data.security);
       })
       .catch(() => toast.error('Error al cargar la configuración'))
       .finally(() => setFetching(false));
@@ -96,9 +163,8 @@ const Settings = () => {
   const tabs = [
     { id: 'company',       name: 'Empresa',         icon: BuildingStorefrontIcon },
     { id: 'receipts',      name: 'Facturación',      icon: DocumentTextIcon },
-    { id: 'notifications', name: 'Notificaciones',   icon: BellIcon },
-    { id: 'security',      name: 'Seguridad',        icon: ShieldCheckIcon },
     { id: 'profile',       name: 'Mi Perfil',        icon: UserIcon },
+    ...(isAdmin ? [{ id: 'branches', name: 'Sucursales', icon: BuildingOfficeIcon }] : []),
   ];
 
   if (fetching) {
@@ -264,91 +330,129 @@ const Settings = () => {
             </div>
           )}
 
-          {/* ── NOTIFICACIONES ── */}
-          {activeTab === 'notifications' && (
+          {/* ── SUCURSALES ── */}
+          {activeTab === 'branches' && isAdmin && (
             <div className="space-y-6">
-              <h3 className="text-lg font-medium text-gray-900">Preferencias de Notificaciones</h3>
-              <div className="space-y-4">
-                {[
-                  { key: 'daily_reports',  label: 'Reportes diarios',             desc: 'Recibir resumen diario de actividades' },
-                  { key: 'new_sale',       label: 'Notificaciones de nuevas ventas', desc: 'Notificar sobre cada nueva venta registrada' },
-                  { key: 'expense_alerts', label: 'Alertas de gastos',             desc: 'Alertas sobre gastos registrados' },
-                ].map(({ key, label, desc }) => (
-                  <div key={key} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{label}</p>
-                      <p className="text-sm text-gray-500">{desc}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setNotifications({ ...notifications, [key]: !notifications[key] })}
-                      className={`${
-                        notifications[key] ? 'bg-primary-500' : 'bg-gray-200'
-                      } relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200`}
-                    >
-                      <span className={`${
-                        notifications[key] ? 'translate-x-5' : 'translate-x-0'
-                      } inline-block h-5 w-5 rounded-full bg-white shadow transform transition duration-200`} />
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium text-gray-900">Sucursales</h3>
+                {!showBranchForm && (
+                  <Button onClick={() => setShowBranchForm(true)}>
+                    <PlusIcon className="h-4 w-4 mr-2" />
+                    Nueva Sucursal
+                  </Button>
+                )}
+              </div>
+
+              {showBranchForm && (
+                <form onSubmit={handleBranchSubmit} className="bg-gray-50 rounded-lg p-5 space-y-4 border border-gray-200">
+                  <div className="flex items-center justify-between mb-1">
+                    <h4 className="text-sm font-semibold text-gray-700">
+                      {editingBranch ? 'Editar Sucursal' : 'Nueva Sucursal'}
+                    </h4>
+                    <button type="button" onClick={handleCancelBranchForm} className="text-gray-400 hover:text-gray-600">
+                      <XMarkIcon className="h-5 w-5" />
                     </button>
                   </div>
-                ))}
-              </div>
-              <Button
-                onClick={() => save('Notificaciones guardadas', settingsService.updateNotifications, notifications)}
-                loading={loading}
-              >
-                Guardar Cambios
-              </Button>
-            </div>
-          )}
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Nombre *</label>
+                      <input
+                        type="text"
+                        required
+                        value={branchForm.name}
+                        onChange={e => setBranchForm({ ...branchForm, name: e.target.value })}
+                        className="mt-1 input-field"
+                        placeholder="Ej: Sucursal Norte"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Dirección</label>
+                      <input
+                        type="text"
+                        value={branchForm.address}
+                        onChange={e => setBranchForm({ ...branchForm, address: e.target.value })}
+                        className="mt-1 input-field"
+                        placeholder="Ej: Av. Cañoto #123"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Teléfono</label>
+                      <input
+                        type="text"
+                        value={branchForm.phone}
+                        onChange={e => setBranchForm({ ...branchForm, phone: e.target.value })}
+                        className="mt-1 input-field"
+                        placeholder="Ej: 73149544"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end space-x-3">
+                    <Button type="button" variant="secondary" onClick={handleCancelBranchForm}>
+                      Cancelar
+                    </Button>
+                    <Button type="submit" loading={branchLoading}>
+                      {editingBranch ? 'Actualizar' : 'Crear'} Sucursal
+                    </Button>
+                  </div>
+                </form>
+              )}
 
-          {/* ── SEGURIDAD ── */}
-          {activeTab === 'security' && (
-            <div className="space-y-6">
-              <h3 className="text-lg font-medium text-gray-900">Configuración de Seguridad</h3>
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Tiempo de sesión (minutos)</label>
-                  <input
-                    type="number"
-                    min="5"
-                    max="480"
-                    value={security.session_timeout}
-                    onChange={e => setSecurity({ ...security, session_timeout: parseInt(e.target.value) || 60 })}
-                    className="mt-1 input-field"
-                  />
-                  <p className="mt-1 text-xs text-gray-500">Entre 5 y 480 minutos</p>
+              {branchLoading && !showBranchForm ? (
+                <div className="text-center py-8 text-gray-400">Cargando sucursales...</div>
+              ) : branches.length === 0 ? (
+                <div className="text-center py-12 text-gray-400">
+                  <BuildingOfficeIcon className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                  <p>No hay sucursales registradas</p>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Intentos de login máximos</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="10"
-                    value={security.login_attempts}
-                    onChange={e => setSecurity({ ...security, login_attempts: parseInt(e.target.value) || 5 })}
-                    className="mt-1 input-field"
-                  />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dirección</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Teléfono</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {branches.map(branch => (
+                        <tr key={branch.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900">{branch.name}</td>
+                          <td className="px-4 py-3 text-sm text-gray-500">{branch.address || '—'}</td>
+                          <td className="px-4 py-3 text-sm text-gray-500">{branch.phone || '—'}</td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${
+                              branch.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'
+                            }`}>
+                              {branch.is_active ? 'Activa' : 'Inactiva'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex justify-end space-x-2">
+                              <button
+                                onClick={() => handleEditBranch(branch)}
+                                className="text-indigo-600 hover:text-indigo-900 p-1 rounded hover:bg-indigo-50"
+                                title="Editar"
+                              >
+                                <PencilIcon className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteBranch(branch)}
+                                className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
+                                title="Eliminar"
+                              >
+                                <TrashIcon className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <div className="sm:col-span-2 flex items-center space-x-3">
-                  <input
-                    type="checkbox"
-                    id="req_pw"
-                    checked={security.require_password_change}
-                    onChange={e => setSecurity({ ...security, require_password_change: e.target.checked })}
-                    className="h-4 w-4 text-primary-600 border-gray-300 rounded"
-                  />
-                  <label htmlFor="req_pw" className="text-sm text-gray-900">
-                    Requerir cambio de contraseña cada 90 días
-                  </label>
-                </div>
-              </div>
-              <Button
-                onClick={() => save('Configuración de seguridad guardada', settingsService.updateSecurity, security)}
-                loading={loading}
-              >
-                Guardar Cambios
-              </Button>
+              )}
             </div>
           )}
 
