@@ -114,10 +114,10 @@ const Reports = () => {
 
   const getReportTitle = () => {
     switch (activeTab) {
-      case 'sales': return 'Reporte de Ventas';
+      case 'sales':    return 'Reporte de Ventas';
       case 'expenses': return 'Reporte de Gastos';
-      case 'profit': return 'Estado de Resultados';
-      default: return 'Reporte';
+      case 'profit':   return 'Estado de Resultados';
+      default:         return 'Reporte';
     }
   };
 
