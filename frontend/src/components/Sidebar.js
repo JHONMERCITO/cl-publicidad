@@ -84,14 +84,14 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
 const SidebarContent = ({ navigation, location, user, onLogout, onNavClick }) => (
   <div className="flex-1 flex flex-col min-h-0 bg-white shadow-lg">
     <div className="flex-1">
-      <div className="flex items-center justify-center h-20 flex-shrink-0 px-4 bg-gradient-to-r from-primary-600 to-primary-500">
+      <div className="flex items-center h-20 flex-shrink-0 px-4 bg-white border-b border-gray-100 shadow-sm">
         <img
           src="/logo.png"
           alt="CL Publicidad y Diseño"
-          className="h-16 w-auto object-contain mix-blend-multiply mr-3"
+          className="h-14 w-auto object-contain mr-3"
           onError={(e) => { e.target.style.display = 'none'; }}
         />
-        <h1 className="text-xl font-bold text-white drop-shadow">CL Publicidad</h1>
+        <h1 className="text-lg font-bold text-primary-700 leading-tight">CL Publicidad</h1>
       </div>
       
       <nav className="mt-5 flex-1 px-2 space-y-1">
