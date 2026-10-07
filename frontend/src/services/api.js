@@ -14,10 +14,30 @@ let authToken = null;
 
 export const setAuthToken = (token) => {
   authToken = token;
+  try { localStorage.setItem('auth_token', token); } catch (_) {}
 };
 
 export const clearAuthToken = () => {
   authToken = null;
+  try {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+  } catch (_) {}
+};
+
+export const getStoredToken = () => {
+  try { return localStorage.getItem('auth_token'); } catch (_) { return null; }
+};
+
+export const setStoredUser = (user) => {
+  try { localStorage.setItem('auth_user', JSON.stringify(user)); } catch (_) {}
+};
+
+export const getStoredUser = () => {
+  try {
+    const u = localStorage.getItem('auth_user');
+    return u ? JSON.parse(u) : null;
+  } catch (_) { return null; }
 };
 
 api.interceptors.request.use(

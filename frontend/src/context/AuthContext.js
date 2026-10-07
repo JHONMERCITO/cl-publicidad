@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useReducer } from 'react';
+import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { authService } from '../services/authService';
-import { setAuthToken, clearAuthToken } from '../services/api';
+import { setAuthToken, clearAuthToken, getStoredToken, setStoredUser, getStoredUser } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -41,16 +41,43 @@ const authReducer = (state, action) => {
   }
 };
 
+const storedToken = getStoredToken();
+const storedUser = getStoredUser();
+
 const initialState = {
-  isAuthenticated: false,
-  user: null,
-  token: null,
-  loading: false,
+  isAuthenticated: !!(storedToken && storedUser),
+  user: storedUser || null,
+  token: storedToken || null,
+  loading: storedToken ? true : false,
   error: null,
 };
 
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
+
+  // Restore session from stored token on app init
+  useEffect(() => {
+    const token = getStoredToken();
+    if (!token) return;
+    setAuthToken(token);
+    authService.me()
+      .then(res => {
+        const user = res.data.user;
+        setStoredUser(user);
+        dispatch({ type: 'LOGIN_SUCCESS', payload: { user, token } });
+      })
+      .catch((error) => {
+        if (error.response?.status === 401) {
+          // Token inválido — cerrar sesión
+          clearAuthToken();
+          dispatch({ type: 'LOGOUT' });
+        } else {
+          // Error temporal (red/servidor) — usar datos en caché
+          dispatch({ type: 'LOGIN_SUCCESS', payload: { user: storedUser, token } });
+        }
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const login = async (credentials) => {
     dispatch({ type: 'LOGIN_START' });
@@ -58,6 +85,7 @@ export const AuthProvider = ({ children }) => {
       const response = await authService.login(credentials);
       const { access_token, user } = response.data;
       setAuthToken(access_token);
+      setStoredUser(user);
       dispatch({ type: 'LOGIN_SUCCESS', payload: { user, token: access_token } });
       return response;
     } catch (error) {
