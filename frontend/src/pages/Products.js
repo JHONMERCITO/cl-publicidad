@@ -9,12 +9,14 @@ import {
   PlusIcon,
   TrashIcon,
   CubeIcon,
+  PencilIcon,
 } from '@heroicons/react/24/outline';
 
 const Products = () => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingService, setEditingService] = useState(null);
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
@@ -84,13 +86,22 @@ const Products = () => {
             <li key={service.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
               <span className="text-sm font-medium text-gray-900">{service.name}</span>
               {isAdmin && (
-                <button
-                  onClick={() => handleDeleteService(service)}
-                  className="text-red-500 hover:text-red-700"
-                  title="Eliminar"
-                >
-                  <TrashIcon className="h-4 w-4" />
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setEditingService(service)}
+                    className="text-gray-400 hover:text-primary-600"
+                    title="Editar"
+                  >
+                    <PencilIcon className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteService(service)}
+                    className="text-red-500 hover:text-red-700"
+                    title="Eliminar"
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                  </button>
+                </div>
               )}
             </li>
           ))}
@@ -111,33 +122,44 @@ const Products = () => {
         isOpen={showCreateModal}
         onClose={() => { setShowCreateModal(false); fetchServices(); }}
       />
+      <ServiceFormModal
+        isOpen={!!editingService}
+        service={editingService}
+        onClose={() => { setEditingService(null); fetchServices(); }}
+      />
     </div>
   );
 };
 
-const ServiceFormModal = ({ isOpen, onClose }) => {
+const ServiceFormModal = ({ isOpen, onClose, service = null }) => {
   const [loading, setLoading] = useState(false);
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
+  const isEditing = !!service;
 
   useEffect(() => {
-    if (isOpen) reset({ name: '' });
-  }, [isOpen, reset]);
+    if (isOpen) reset({ name: service?.name || '' });
+  }, [isOpen, service, reset]);
 
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      await productService.createProduct({ name: data.name });
-      toast.success('Servicio creado');
+      if (isEditing) {
+        await productService.updateProduct(service.id, { name: data.name });
+        toast.success('Servicio actualizado');
+      } else {
+        await productService.createProduct({ name: data.name });
+        toast.success('Servicio creado');
+      }
       onClose();
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Error al crear el servicio');
+      toast.error(error.response?.data?.error || 'Error al guardar el servicio');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Nuevo Servicio" size="sm">
+    <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? 'Editar Servicio' : 'Nuevo Servicio'} size="sm">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700">
@@ -160,7 +182,7 @@ const ServiceFormModal = ({ isOpen, onClose }) => {
             Cancelar
           </Button>
           <Button type="submit" loading={loading}>
-            Crear
+            {isEditing ? 'Guardar' : 'Crear'}
           </Button>
         </div>
       </form>
