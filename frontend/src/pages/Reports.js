@@ -216,7 +216,7 @@ const Reports = () => {
           </nav>
         </div>
 
-        <div className="p-6" ref={printRef}>
+        <div className="p-6">
           {/* Header de impresión */}
           <div className="print-only mb-6 text-center border-b pb-4">
             <h1 className="text-2xl font-bold">CL Publicidad y Diseño</h1>
