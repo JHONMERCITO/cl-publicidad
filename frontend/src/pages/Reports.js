@@ -4,7 +4,6 @@ import { expenseService } from '../services/expenseService';
 import { dashboardService } from '../services/dashboardService';
 import { formatDate, formatCurrency, getDateRange } from '../utils/formatters';
 import { useAuth } from '../context/AuthContext';
-import Button from '../components/Button';
 import {
   BarChart, Bar,
   PieChart, Pie, Cell,
