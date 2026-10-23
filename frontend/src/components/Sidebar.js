@@ -17,7 +17,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: HomeIcon, adminOnly: false },
   { name: 'Servicios', href: '/products', icon: CubeIcon, adminOnly: false },
   { name: 'Ventas', href: '/receipts', icon: ReceiptPercentIcon, adminOnly: false },
-  { name: 'Gastos', href: '/expenses', icon: CurrencyDollarIcon, adminOnly: false },
+  { name: 'Gastos', href: '/expenses', icon: CurrencyDollarIcon, adminOnly: true },
   { name: 'Reportes', href: '/reports', icon: ChartBarIcon, adminOnly: false },
   { name: 'Usuarios', href: '/users', icon: UsersIcon, adminOnly: true },
   { name: 'Configuración', href: '/settings', icon: Cog6ToothIcon, adminOnly: true },
