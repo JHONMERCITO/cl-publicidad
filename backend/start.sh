@@ -8,6 +8,7 @@ php artisan migrate --force
 
 echo "=== Clearing caches ==="
 php artisan config:clear || true
+php artisan route:clear || true
 php artisan cache:clear || true
 
 echo "=== Starting server on port ${PORT:-8000} ==="
