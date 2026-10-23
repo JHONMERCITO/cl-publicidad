@@ -68,6 +68,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/receipts/{receipt}/payments', [PaymentController::class, 'getReceiptPayments']);
     Route::post('/receipts/{receipt}/payments', [PaymentController::class, 'addPayment']);
     Route::get('/reports/payments', [PaymentController::class, 'paymentsReport']);
+
+    // Ver gastos (todos los usuarios autenticados)
+    Route::get('/expenses', [ExpenseController::class, 'index']);
+    Route::get('/expenses/categories', [ExpenseController::class, 'categories']);
+    Route::get('/expenses/{expense}', [ExpenseController::class, 'show']);
+    Route::get('/reports/expenses', [ExpenseController::class, 'expensesReport']);
     
     // Rutas solo para administradores
     Route::middleware('role:admin')->group(function () {
@@ -98,12 +104,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/payments/{payment}', [PaymentController::class, 'updatePayment']);
         Route::delete('/payments/{payment}', [PaymentController::class, 'deletePayment']);
         
-        // Gestión completa de gastos (solo admin)
+        // Crear/editar/eliminar gastos (solo admin)
         Route::post('/expenses', [ExpenseController::class, 'store']);
-        Route::get('/expenses', [ExpenseController::class, 'index']);
-        Route::get('/expenses/categories', [ExpenseController::class, 'categories']);
-        Route::get('/expenses/{expense}', [ExpenseController::class, 'show']);
-        Route::get('/reports/expenses', [ExpenseController::class, 'expensesReport']);
         Route::put('/expenses/{expense}', [ExpenseController::class, 'update']);
         Route::delete('/expenses/{expense}', [ExpenseController::class, 'destroy']);
         
