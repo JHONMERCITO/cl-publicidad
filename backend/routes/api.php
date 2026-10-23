@@ -69,11 +69,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/receipts/{receipt}/payments', [PaymentController::class, 'addPayment']);
     Route::get('/reports/payments', [PaymentController::class, 'paymentsReport']);
 
-    // Ver gastos (todos los usuarios autenticados)
+    // Gastos (ver y crear para todos los autenticados)
     Route::get('/expenses', [ExpenseController::class, 'index']);
     Route::get('/expenses/categories', [ExpenseController::class, 'categories']);
     Route::get('/expenses/{expense}', [ExpenseController::class, 'show']);
     Route::get('/reports/expenses', [ExpenseController::class, 'expensesReport']);
+    Route::post('/expenses', [ExpenseController::class, 'store']);
     
     // Rutas solo para administradores
     Route::middleware('role:admin')->group(function () {
@@ -104,8 +105,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/payments/{payment}', [PaymentController::class, 'updatePayment']);
         Route::delete('/payments/{payment}', [PaymentController::class, 'deletePayment']);
         
-        // Crear/editar/eliminar gastos (solo admin)
-        Route::post('/expenses', [ExpenseController::class, 'store']);
+        // Editar/eliminar gastos (solo admin)
         Route::put('/expenses/{expense}', [ExpenseController::class, 'update']);
         Route::delete('/expenses/{expense}', [ExpenseController::class, 'destroy']);
         

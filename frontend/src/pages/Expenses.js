@@ -134,14 +134,12 @@ const Expenses = () => {
             Gastos
           </h2>
         </div>
-        {isAdmin && (
-          <div className="mt-4 flex md:mt-0 md:ml-4">
-            <Button onClick={handleCreateExpense}>
-              <PlusIcon className="h-4 w-4 mr-2" />
-              Nuevo Gasto
-            </Button>
-          </div>
-        )}
+        <div className="mt-4 flex md:mt-0 md:ml-4">
+          <Button onClick={handleCreateExpense}>
+            <PlusIcon className="h-4 w-4 mr-2" />
+            Nuevo Gasto
+          </Button>
+        </div>
       </div>
 
       {/* Filtros */}
