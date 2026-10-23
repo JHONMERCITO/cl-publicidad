@@ -13,6 +13,11 @@ class ExpenseController extends Controller
     {
         $query = Expense::with('user:id,name');
 
+        // Empleados solo ven sus propios gastos
+        if ($request->user()->role !== 'admin') {
+            $query->where('user_id', $request->user()->id);
+        }
+
         // Filtros - solo aplicar si tienen valores
         if ($request->filled('category')) {
             $query->byCategory($request->category);
@@ -73,8 +78,12 @@ class ExpenseController extends Controller
         return response()->json($expense->load('user:id,name'), 201);
     }
 
-    public function show(Expense $expense)
+    public function show(Request $request, Expense $expense)
     {
+        if ($request->user()->role !== 'admin' && $expense->user_id !== $request->user()->id) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
         return response()->json($expense->load('user:id,name'));
     }
 
