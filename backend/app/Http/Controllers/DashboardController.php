@@ -48,6 +48,7 @@ class DashboardController extends Controller
             ->sum('total');
 
         $totalExpenses = Expense::byDateRange($startDate, $endDate)
+            ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
             ->sum('amount');
 
         $netProfit = $totalSales - $totalExpenses;
@@ -154,6 +155,7 @@ class DashboardController extends Controller
         // Gastos por categoría (período actual)
         $expensesByCategory = Expense::select('category', DB::raw('SUM(amount) as total'))
             ->byDateRange($startDate, $endDate)
+            ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
             ->groupBy('category')
             ->orderBy('total', 'desc')
             ->get();
@@ -186,12 +188,15 @@ class DashboardController extends Controller
                         ->whereIn('payment_status', ['sin_anticipo', 'con_anticipo'])
                         ->where('status', '!=', 'cancelado')
                         ->sum(DB::raw('total - paid_amount'));
+                    $expenses = Expense::where('branch_id', $branch->id)
+                        ->byDateRange($startDate, $endDate)->sum('amount');
                     return [
-                        'id'           => $branch->id,
-                        'name'         => $branch->name,
-                        'total_sales'  => round($sales, 2),
-                        'pending'      => round($pending, 2),
-                        'users_count'  => $branch->users()->count(),
+                        'id'             => $branch->id,
+                        'name'           => $branch->name,
+                        'total_sales'    => round($sales, 2),
+                        'total_expenses' => round($expenses, 2),
+                        'pending'        => round($pending, 2),
+                        'users_count'    => $branch->users()->count(),
                     ];
                 });
         }
@@ -392,11 +397,9 @@ class DashboardController extends Controller
         $salesTax = $sales->sum('tax');
         $salesDiscount = $sales->sum('discount');
 
-        // Gastos (no filtran por sucursal ya que Expense no tiene branch_id;
-        // empleados ven solo sus ventas pero gastos globales quedan en cero para ellos)
-        $expenses = $branchId && !$user->isAdmin()
-            ? collect()
-            : Expense::byDateRange($startDate, $endDate)->get();
+        $expenseQuery = Expense::byDateRange($startDate, $endDate);
+        if ($branchId) $expenseQuery->where('branch_id', $branchId);
+        $expenses = $expenseQuery->get();
         $expensesByCategory = $expenses->groupBy('category')
             ->map(function ($categoryExpenses) {
                 return $categoryExpenses->sum('amount');

@@ -70,7 +70,8 @@ class ExpenseController extends Controller
 
         $expense = Expense::create([
             ...$request->all(),
-            'user_id' => $request->user()->id,
+            'user_id'   => $request->user()->id,
+            'branch_id' => $request->user()->branch_id,
         ]);
 
         NotificationService::sendNewExpenseNotification($expense->toArray());

@@ -206,6 +206,10 @@ const Dashboard = () => {
                     <span className="font-semibold text-green-600">{formatCurrency(branch.total_sales)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Gastos</span>
+                    <span className="font-semibold text-red-500">{formatCurrency(branch.total_expenses)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Por cobrar</span>
                     <span className="font-semibold text-orange-500">{formatCurrency(branch.pending)}</span>
                   </div>

@@ -19,6 +19,7 @@ class Expense extends Model
         'expense_date',
         'notes',
         'user_id',
+        'branch_id',
     ];
 
     protected $casts = [
@@ -30,6 +31,11 @@ class Expense extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(\App\Models\Branch::class);
     }
 
     // Scopes
